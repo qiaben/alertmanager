@@ -1,0 +1,56 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - ../../base
+
+patches:
+  - patch: |-
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: alertmanager
+        namespace: monitoring
+      spec:
+        ingressClassName: nginx-private
+        tls:
+        - hosts:
+          - alertmanager.apps-stage.in.hinisoft.com
+          secretName: alertmanager-tls-stage
+        rules:
+        - host: alertmanager.apps-stage.in.hinisoft.com
+          http:
+            paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                  name: alertmanager
+                  port:
+                    number: 9093
+    target:
+      kind: Ingress
+      name: alertmanager
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: alertmanager
+        namespace: monitoring
+      spec:
+        template:
+          spec:
+            containers:
+            - name: alertmanager
+              args:
+                - '--config.file=/etc/alertmanager/alertmanager.yml'
+                - '--storage.path=/alertmanager'
+                - '--web.external-url=https://alertmanager.apps-stage.in.hinisoft.com'
+    target:
+      kind: Deployment
+      name: alertmanager
+
+namePrefix: stage-
+nameSuffix: ""
